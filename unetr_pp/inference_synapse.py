@@ -4,6 +4,7 @@ import SimpleITK as sitk
 import numpy as np
 import argparse
 from medpy import metric
+import matplotlib.pyplot as plt
 
 def read_nii(path):
     return sitk.GetArrayFromImage(sitk.ReadImage(path))
@@ -32,15 +33,21 @@ def process_label(label):
    
     return spleen,right_kidney,left_kidney,gallbladder,liver,stomach,aorta,pancreas
 
-def test(fold): 
-    label_path= None # Replace None by full path of "DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/"
-    infer_path = None # Replace None by full path of "output_synapse"  
-    
-    label_list=sorted(glob.glob(os.path.join(label_path,'labelsTs','*nii.gz')))
-    infer_list=sorted(glob.glob(os.path.join(infer_path,'inferTs','*nii.gz')))
+def test(fold):
+    img_dir = "D:/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task02_Synapse/imagesTs"
+    label_dir = "D:/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/labelsTr" # Replace None by full path of "DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/"
+    infer_dir = "D:/medical_image/unetr_plus_plus/unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw" # Replace None by full path of "output_synapse"
+
+    img_dir = "/home/luzeng/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task02_Synapse/imagesTs"
+    label_dir = "/home/luzeng/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/labelsTr"
+    infer_dir = "unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw"
+
+
+
+    # 这里只要先加载infer的list, 之后的label就根据infer的name来取得就行
+    infer_list=sorted(glob.glob(os.path.join(infer_dir, '*nii.gz')))
     print("loading success...")
-    print(label_list)
-    print(infer_list)
+
     Dice_spleen=[]
     Dice_right_kidney=[]
     Dice_left_kidney=[]
@@ -59,18 +66,33 @@ def test(fold):
     hd_aorta=[]
     hd_pancreas=[]
     
-    file=infer_path + 'inferTs/'+fold
+    file = infer_dir + 'inferTs/' + fold
     if not os.path.exists(file):
         os.makedirs(file)
     fw = open(file+'/dice_pre.txt', 'a')
     
-    for label_path,infer_path in zip(label_list,infer_list):
-        print(label_path.split('/')[-1])
-        print(infer_path.split('/')[-1])
-        label,infer = read_nii(label_path),read_nii(infer_path)
+    for infer_path in infer_list:
+        
+        label_path = os.path.join(label_dir, os.path.basename(infer_path).replace("img", "label"))
+        img_path = os.path.join(img_dir, os.path.basename(infer_path))
+
+        print(label_path)
+        print(img_path)
+        print(infer_path)
+
+        # 这里再增加一个原图的预处理
+        img, label,infer = read_nii(img_path), read_nii(label_path),read_nii(infer_path)
+
+        # 这里的预处理的结果估计可以用来可视化
         label_spleen,label_right_kidney,label_left_kidney,label_gallbladder,label_liver,label_stomach,label_aorta,label_pancreas=process_label(label)
         infer_spleen,infer_right_kidney,infer_left_kidney,infer_gallbladder,infer_liver,infer_stomach,infer_aorta,infer_pancreas=process_label(infer)
-        
+
+        # for i in range(len(img)):
+        #     plt.subplot(131), plt.imshow(np.array(img[i, :, :], dtype=np.uint8))
+        #     plt.subplot(132), plt.imshow(np.array(label[i, :, :], dtype=np.uint8))
+        #     plt.subplot(133), plt.imshow(np.array(infer[i, :, :], dtype=np.uint8))
+        #     plt.show()
+
         Dice_spleen.append(dice(infer_spleen,label_spleen))
         Dice_right_kidney.append(dice(infer_right_kidney,label_right_kidney))
         Dice_left_kidney.append(dice(infer_left_kidney,label_left_kidney))
