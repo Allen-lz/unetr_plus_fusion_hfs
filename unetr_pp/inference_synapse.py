@@ -33,8 +33,11 @@ def process_label(label):
     return spleen,right_kidney,left_kidney,gallbladder,liver,stomach,aorta,pancreas
 
 def test(fold): 
-    label_path= None # Replace None by full path of "DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/"
-    infer_path = None # Replace None by full path of "output_synapse"  
+    # label_path= None # Replace None by full path of "DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/"
+    # infer_path = None # Replace None by full path of "output_synapse"
+
+    label_path = "D:/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse"
+    infer_path = "output_synapse"  # Replace None by full path of "output_synapse"
     
     label_list=sorted(glob.glob(os.path.join(label_path,'labelsTs','*nii.gz')))
     infer_list=sorted(glob.glob(os.path.join(infer_path,'inferTs','*nii.gz')))

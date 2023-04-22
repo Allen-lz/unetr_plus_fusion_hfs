@@ -18,7 +18,7 @@ from copy import deepcopy
 from typing import Union, Tuple
 
 import numpy as np
-import SimpleITK as sitk
+import SimpleITK as sitk  # simpleitk==2.2.0
 from batchgenerators.augmentations.utils import resize_segmentation
 from unetr_pp.preprocessing.preprocessing import get_lowres_axis, get_do_separate_z, resample_data_or_seg
 from batchgenerators.utilities.file_and_folder_operations import *
