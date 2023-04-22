@@ -1,0 +1,6 @@
+*.ckpt
+*.pt
+unetr_pp/evaluation/unetr_pp_acdc_checkpoint
+unetr_pp/evaluation/unetr_pp_lung_checkpoint
+unetr_pp/evaluation/unetr_pp_synapse_checkpoint
+unetr_pp/evaluation/unetr_pp_tumor_checkpoint
