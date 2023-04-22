@@ -19,7 +19,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from unetr_pp.training.data_augmentation.data_augmentation_moreDA import get_moreDA_augmentation
-from unetr_pp.training.loss_functions.deep_supervision import MultipleOutputLoss2
+from unetr_pp.training.loss_functions.deep_supervision import MultipleOutputLoss2, MSELoss, MAELoss
 from unetr_pp.utilities.to_torch import maybe_to_torch, to_cuda
 from unetr_pp.network_architecture.initialization import InitWeights_He
 from unetr_pp.network_architecture.neural_network import SegmentationNetwork
@@ -114,6 +114,11 @@ class unetr_pp_trainer_acdc(Trainer_acdc):
                 # now wrap the loss
                 self.loss = MultipleOutputLoss2(self.loss, self.ds_loss_weights)
                 ################# END ###################
+                # add recon loss
+                self.recon_loss = [MAELoss, MSELoss]
+                # =======================================
+
+
 
             self.folder_with_preprocessed_data = join(self.dataset_directory,
                                                       self.plans['data_identifier'] + "_stage%d" % self.stage)
@@ -279,9 +284,15 @@ class unetr_pp_trainer_acdc(Trainer_acdc):
         if self.fp16:
             with autocast():
                 output = self.network(data)
-                del data
 
-                l = self.loss(output, target)
+                l = self.loss(output["original"], target)
+
+                b, c, f, h, w = data.shape
+                data = data.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
+                for reon_loss in self.recon_loss:
+                    l += reon_loss(output["recon"], data)
+
+                del data
 
             if do_backprop:
                 self.amp_grad_scaler.scale(l).backward()
@@ -291,8 +302,14 @@ class unetr_pp_trainer_acdc(Trainer_acdc):
                 self.amp_grad_scaler.update()
         else:
             output = self.network(data)
+            l = self.loss(output["original"], target)
+
+            b, c, f, h, w = data.shape
+            data = data.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
+            for reon_loss in self.recon_loss:
+                l += reon_loss(output["recon"], data)
+
             del data
-            l = self.loss(output, target)
 
             if do_backprop:
                 l.backward()
