@@ -19,7 +19,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from unetr_pp.training.data_augmentation.data_augmentation_moreDA import get_moreDA_augmentation
-from unetr_pp.training.loss_functions.deep_supervision import MultipleOutputLoss2
+from unetr_pp.training.loss_functions.deep_supervision import MultipleOutputLoss2, MAELoss, MSELoss
 from unetr_pp.utilities.to_torch import maybe_to_torch, to_cuda
 from unetr_pp.network_architecture.synapse.unetr_pp_synapse import UNETR_PP
 from unetr_pp.network_architecture.initialization import InitWeights_He
@@ -105,6 +105,8 @@ class unetr_pp_trainer_synapse(Trainer_synapse):
                 # now wrap the loss
                 self.loss = MultipleOutputLoss2(self.loss, self.ds_loss_weights)
                 ################# END ###################
+                # add recon loss
+                self.recon_loss = [MAELoss, MSELoss]
 
             self.folder_with_preprocessed_data = join(self.dataset_directory,
                                                       self.plans['data_identifier'] + "_stage%d" % self.stage)
@@ -268,12 +270,39 @@ class unetr_pp_trainer_synapse(Trainer_synapse):
 
         self.optimizer.zero_grad()
 
+        # if self.fp16:
+        #     with autocast():
+        #         output = self.network(data)
+        #         del data
+        #
+        #         l = self.loss(output, target)
+        #
+        #     if do_backprop:
+        #         self.amp_grad_scaler.scale(l).backward()
+        #         self.amp_grad_scaler.unscale_(self.optimizer)
+        #         torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+        #         self.amp_grad_scaler.step(self.optimizer)
+        #         self.amp_grad_scaler.update()
+        # else:
+        #     output = self.network(data)
+        #     del data
+        #     l = self.loss(output, target)
+        #
+        #     if do_backprop:
+        #         l.backward()
+        #         torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+        #         self.optimizer.step()
+
+        # ============================================================================
         if self.fp16:
             with autocast():
                 output = self.network(data)
+                l = self.loss(output["original"], target)
+                b, c, f, h, w = data.shape
+                data = data.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
+                for reon_loss in self.recon_loss:
+                    l += reon_loss(output["recon"], data)
                 del data
-
-                l = self.loss(output, target)
 
             if do_backprop:
                 self.amp_grad_scaler.scale(l).backward()
@@ -283,13 +312,18 @@ class unetr_pp_trainer_synapse(Trainer_synapse):
                 self.amp_grad_scaler.update()
         else:
             output = self.network(data)
-            del data
-            l = self.loss(output, target)
+            l = self.loss(output["original"], target)
 
+            b, c, f, h, w = data.shape
+            data = data.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
+            for reon_loss in self.recon_loss:
+                l += reon_loss(output["recon"], data)
+            del data
             if do_backprop:
                 l.backward()
                 torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
                 self.optimizer.step()
+        # ============================================================================
 
         if run_online_evaluation:
             self.run_online_evaluation(output, target)

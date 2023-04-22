@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-
+import torch
 from torch import nn
 
 
@@ -41,3 +41,6 @@ class MultipleOutputLoss2(nn.Module):
             if weights[i] != 0:
                 l += weights[i] * self.loss(x[i], y[i])
         return l
+
+MSELoss = torch.nn.MSELoss(reduce=True, size_average=True)
+MAELoss = torch.nn.L1Loss()

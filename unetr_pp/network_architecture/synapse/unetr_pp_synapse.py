@@ -1,8 +1,13 @@
+import torch
 from torch import nn
 from typing import Tuple, Union
 from unetr_pp.network_architecture.neural_network import SegmentationNetwork
 from unetr_pp.network_architecture.dynunet_block import UnetOutBlock, UnetResBlock
 from unetr_pp.network_architecture.synapse.model_components import UnetrPPEncoder, UnetrUpBlock
+
+from unetr_pp.network_architecture.HFS import hfs as HFS
+from unetr_pp.network_architecture.HFS import hfs1d as HFS1D
+from unetr_pp.network_architecture.wavelet_transform import ENet as DecoupleModule
 
 
 class UNETR_PP(SegmentationNetwork):
@@ -125,32 +130,82 @@ class UNETR_PP(SegmentationNetwork):
             self.out2 = UnetOutBlock(spatial_dims=3, in_channels=feature_size * 2, out_channels=out_channels)
             self.out3 = UnetOutBlock(spatial_dims=3, in_channels=feature_size * 4, out_channels=out_channels)
 
+        # ========================================================================================================
+        self.hfs = HFS()
+        self.hfs1d = HFS1D()
+        self.Decouple = DecoupleModule(in_channel=1)
+        # ========================================================================================================
+
+
+    def extract_cross_hfs(self, enc):
+        space_hfs_enc = torch.mean(enc, dim=2, keepdim=False)
+        space_hfs_map = self.hfs.run(space_hfs_enc).unsqueeze(dim=1)  # 这里先对frame求一个均值
+        channel_hfs_enc = torch.mean(torch.mean(enc, dim=[-2, -1], keepdim=False), dim=2, keepdim=False)  # 先对空间求一个均值然后对frame求一个mean
+        channel_hfs_vector = self.hfs1d(channel_hfs_enc).unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+        fusion_hfs_voxel = channel_hfs_vector + space_hfs_map
+        enc = enc * fusion_hfs_voxel
+        return enc
+
     def proj_feat(self, x, hidden_size, feat_size):
         x = x.view(x.size(0), feat_size[0], feat_size[1], feat_size[2], hidden_size)
         x = x.permute(0, 4, 1, 2, 3).contiguous()
         return x
 
-    def forward(self, x_in):
+    def forward(self, x_in, phrase="train"):
+        # ===============================================================================
+        b, c, f, h, w = x_in.shape
+        d_x_in = x_in.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
+        recon_x, x_h, x_l = self.Decouple(d_x_in)
+
+        _c, _h, _w = x_h.shape[-3:]
+
+        # (2, 64, 64, 16, 16) --> (2, 64, 64, 16, 16)  --> (2, 64, 1, 16, 16)
+        x_h = x_h.reshape(b, f, _c, _h, _w).permute(0, 2, 1, 3, 4)
+        x_h = torch.mean(x_h, dim=2, keepdim=True)
+
+        # (2, 64, 64, 16, 16) --> (2, 64, 64, 16, 16)  --> (2, 64, 1, 16, 16)
+        x_l = x_l.reshape(b, f, _c, _h, _w).permute(0, 2, 1, 3, 4)
+        x_l = torch.mean(x_l, dim=2, keepdim=True)
+        # ===============================================================================
+
+
         x_output, hidden_states = self.unetr_pp_encoder(x_in)
 
         convBlock = self.encoder1(x_in)
 
         # Four encoders
         enc1 = hidden_states[0]
-        enc2 = hidden_states[1]
+        enc1 = self.extract_cross_hfs(enc1)
+        enc2 = hidden_states[1] + x_l  # <<<<
+        enc2 = self.extract_cross_hfs(enc2)
         enc3 = hidden_states[2]
+        enc3 = self.extract_cross_hfs(enc3)
         enc4 = hidden_states[3]
 
         # Four decoders
         dec4 = self.proj_feat(enc4, self.hidden_size, self.feat_size)
         dec3 = self.decoder5(dec4, enc3)
-        dec2 = self.decoder4(dec3, enc2)
+        dec2 = self.decoder4(dec3, enc2) + x_h  # <<<<
         dec1 = self.decoder3(dec2, enc1)
 
         out = self.decoder2(dec1, convBlock)
-        if self.do_ds:
-            logits = [self.out1(out), self.out2(dec1), self.out3(dec2)]
+        # if self.do_ds:
+        #     logits = [self.out1(out), self.out2(dec1), self.out3(dec2)]
+        # else:
+        #     logits = self.out1(out)
+
+
+        if phrase == "train":
+            if self.do_ds:
+                logits = {"original": [self.out1(out), self.out2(dec1), self.out3(dec2)],
+                          "recon": recon_x}
+            else:
+                logits = {"original": self.out1(out),
+                          "recon": recon_x}
         else:
-            logits = self.out1(out)
+            if self.do_ds:
+                logits = [self.out1(out), self.out2(dec1), self.out3(dec2)]
+            else:
+                logits = self.out1(out)
 
         return logits
