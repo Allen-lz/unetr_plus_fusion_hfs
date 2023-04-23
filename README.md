@@ -39,7 +39,7 @@ bash evaluation_scripts/run_evaluation_synapse.sh
 
 要得到真正的指标需要使用到推理
 ```
-python unetr_pp/inference_synapse.py
+python unetr_pp/inference_synapse.py fold_0
 ```
 
 
