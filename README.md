@@ -32,9 +32,14 @@ unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Syna
 unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw/validation_args.json
 ```
 
-最后输入以下命令才能正常的验证(注意更换数据集的路径)
+输入以下命令才能正常的验证(注意更换数据集的路径), 这个脚本是生成一些结果并保存下来
 ```
 bash evaluation_scripts/run_evaluation_synapse.sh
+```
+
+要得到真正的指标需要使用到推理
+```
+python unetr_pp/inference_synapse.py fold_0
 ```
 
 
