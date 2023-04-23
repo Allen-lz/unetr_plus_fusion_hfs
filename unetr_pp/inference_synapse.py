@@ -36,13 +36,11 @@ def process_label(label):
 def test(fold):
     img_dir = "D:/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task02_Synapse/imagesTs"
     label_dir = "D:/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/labelsTr" # Replace None by full path of "DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/"
-    infer_dir = "D:/medical_image/unetr_plus_plus/unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw" # Replace None by full path of "output_synapse"
+    infer_dir = "D:/medical_image/unetr_plus_plus/unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw_postprocessed" # Replace None by full path of "output_synapse"
 
-    img_dir = "/home/luzeng/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task02_Synapse/imagesTs"
-    label_dir = "/home/luzeng/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/labelsTr"
-    infer_dir = "unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw"
-
-
+    # img_dir = "/home/luzeng/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task02_Synapse/imagesTs"
+    # label_dir = "/home/luzeng/datasets/UNETR_PP_DATASETS/DATASET/unetr_pp_raw/unetr_pp_raw_data/Task002_Synapse/labelsTr"
+    # infer_dir = "unetr_pp/evaluation/unetr_pp_synapse_checkpoint/unetr_pp/3d_fullres/Task002_Synapse/unetr_pp_trainer_synapse__unetr_pp_Plansv2.1/fold_0/validation_raw_postprocessed"
 
     # 这里只要先加载infer的list, 之后的label就根据infer的name来取得就行
     infer_list=sorted(glob.glob(os.path.join(infer_dir, '*nii.gz')))
