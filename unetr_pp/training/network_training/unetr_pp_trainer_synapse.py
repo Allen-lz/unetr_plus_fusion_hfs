@@ -304,7 +304,8 @@ class unetr_pp_trainer_synapse(Trainer_synapse):
                 b, c, f, h, w = data.shape
                 data = data.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
                 for reon_loss in self.recon_loss:
-                    l += reon_loss(output["recon"], data)
+                    r_l = reon_loss(output["recon"], data)
+                    l += 0.15 * r_l
                 del data
 
             if do_backprop:
@@ -320,7 +321,8 @@ class unetr_pp_trainer_synapse(Trainer_synapse):
             b, c, f, h, w = data.shape
             data = data.permute(0, 2, 1, 3, 4).reshape(b * f, c, h, w)
             for reon_loss in self.recon_loss:
-                l += reon_loss(output["recon"], data)
+                r_l = reon_loss(output["recon"], data)
+                l += 0.15 * r_l
             del data
             if do_backprop:
                 l.backward()
