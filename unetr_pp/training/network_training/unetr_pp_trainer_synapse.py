@@ -198,6 +198,9 @@ class unetr_pp_trainer_synapse(Trainer_synapse):
         :param target:
         :return:
         """
+        if isinstance(output, dict) and "original" in output.keys():
+            output = output["original"]
+
         if self.deep_supervision:
             target = target[0]
             output = output[0]

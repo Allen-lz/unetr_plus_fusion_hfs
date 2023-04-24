@@ -18,8 +18,8 @@ class hfs():
             :param type: square kernel or proportional kernel
             :return: x * mask
         """
-        b, c, h, w = x.size()
-        # k_size = (1, 1)
+        b, c, h, w = x.shape
+        b, c, h, w = int(b), int(c), int(h), int(w)
         # -------------------------------------------------------------------------
         avg = x.mean(1)
         thr = avg.view(b, -1).sum(-1) / (h * w)
